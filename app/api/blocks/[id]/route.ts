@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/http";
+import { assertStaff } from "@/lib/staff-auth";
 import { removeBlock, saveBlock } from "@/lib/service";
 import type { VisitMode } from "@/lib/types";
 
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertStaff(request);
     const { id } = await context.params;
     const body = (await request.json()) as {
       providerId?: string;
@@ -31,8 +33,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertStaff(request);
     const { id } = await context.params;
     await removeBlock(id);
     return NextResponse.json({ ok: true });

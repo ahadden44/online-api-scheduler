@@ -59,7 +59,7 @@ The practice site and this scheduler are two different addresses. For a practice
 <script src="https://schedule.xxeyecare.com/weekline.js" async></script>
 ```
 
-Someone opening `https://xxeyecare.com/appointments` stays on the practice site and sees the booking widget in the page. The weekly hours board is not in that script. Staff post hours at `https://schedule.xxeyecare.com/board` and do not link that from the public site.
+Someone opening `https://xxeyecare.com/appointments` stays on the practice site and sees the booking widget in the page. The weekly hours board is not in that script. Staff post hours at `https://schedule.xxeyecare.com/board`. That page asks for `STAFF_CODE`, which is set only on the scheduler (for example a Vercel environment variable). Knowing the address is not enough to change hours. Do not put the board link or the code on the public site.
 
 A new tab, instead of an embed, is a normal link on `xxeyecare.com`:
 

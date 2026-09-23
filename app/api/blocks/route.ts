@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/http";
+import { assertStaff } from "@/lib/staff-auth";
 import { saveBlock } from "@/lib/service";
 import type { VisitMode } from "@/lib/types";
 
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    assertStaff(request);
     const body = (await request.json()) as {
       providerId?: string;
       locationId?: string | null;

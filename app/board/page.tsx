@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
+import { StaffGate } from "@/components/staff-gate";
 import { WeekBoard } from "@/components/week-board";
 
 export const metadata: Metadata = {
@@ -12,7 +13,9 @@ export default function BoardPage() {
     <>
       <SiteHeader staff />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 md:px-6">
-        <WeekBoard />
+        <StaffGate>
+          <WeekBoard />
+        </StaffGate>
       </main>
     </>
   );

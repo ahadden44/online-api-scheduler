@@ -49,11 +49,19 @@ The patient page is `/`. That is the only address to put on the practice website
 
 ## On the practice website
 
-Publish this app, then add a button on the practice site that opens the patient address in a new tab. Do not link `/board`. Staff keep that address as their own bookmark and post each week there.
+Leave this app in its own repo. It holds the Tebra credentials and the week board. The practice website repo only adds the embed. Patients get scheduling inside the existing site. The weekly hours page is not part of that snippet, and `/board` cannot be framed.
+
+```html
+<script src="https://schedule.example.com/weekline.js" async></script>
+```
+
+A plain link still works when a new tab is enough:
 
 ```html
 <a href="https://schedule.example.com">Schedule an appointment</a>
 ```
+
+Staff post hours at `https://schedule.example.com/board`. Do not put that address on the public site.
 
 ```
 npm test

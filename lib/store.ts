@@ -3,7 +3,11 @@ import path from "node:path";
 import { createPreviewStore } from "@/lib/seed";
 import type { MedSlotStore } from "@/lib/types";
 
-const filePath = path.join(process.cwd(), "data", "medslot.json");
+function storeFilePath(): string {
+  const dir = process.env.MEDSLOT_DATA_DIR?.trim();
+  if (dir) return path.join(dir, "medslot.json");
+  return path.join(process.cwd(), "data", "medslot.json");
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -19,6 +23,7 @@ function withLock<T>(task: () => Promise<T>): Promise<T> {
 export async function readStore(): Promise<MedSlotStore> {
   return withLock(async () => {
     try {
+      const filePath = storeFilePath();
       const raw = await readFile(filePath, "utf8");
       const parsed = JSON.parse(raw) as MedSlotStore;
       if (parsed.version !== 1) throw new Error("unknown store");
@@ -29,6 +34,7 @@ export async function readStore(): Promise<MedSlotStore> {
         /* fall through and rebuild a readable preview if the file is corrupt */
       }
       const seeded = createPreviewStore();
+      const filePath = storeFilePath();
       await mkdir(path.dirname(filePath), { recursive: true });
       await writeFile(filePath, JSON.stringify(seeded, null, 2));
       return seeded;
@@ -38,6 +44,7 @@ export async function readStore(): Promise<MedSlotStore> {
 
 export async function updateStore(mutate: (store: MedSlotStore) => void): Promise<MedSlotStore> {
   return withLock(async () => {
+    const filePath = storeFilePath();
     let store: MedSlotStore;
     try {
       store = JSON.parse(await readFile(filePath, "utf8")) as MedSlotStore;

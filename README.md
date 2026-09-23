@@ -55,7 +55,7 @@ No subdomain is required. Publish MedSlot once, on any host. The practice site s
 <script src="https://YOUR-MEDSLOT-HOST/medslot.js" async></script>
 ```
 
-`YOUR-MEDSLOT-HOST` is wherever this app is published, such as a Vercel address. It does not have to be part of `xxeyecare.com`. A patient who opens `https://xxeyecare.com/appointments` stays on that site and sees booking in the page. The weekly hours board is not in the script.
+`YOUR-MEDSLOT-HOST` is wherever this app is published, such as `xxeyecare-medslot.azurewebsites.net`. It does not have to be part of `xxeyecare.com`. A patient who opens `https://xxeyecare.com/appointments` stays on that site and sees booking in the page. The weekly hours board is not in the script.
 
 Staff post hours at `https://YOUR-MEDSLOT-HOST/board`. That page asks for `STAFF_CODE`, set only on the MedSlot host. Do not put the board link or the code on the practice site.
 
@@ -64,6 +64,30 @@ A new tab, instead of an embed, is a normal link:
 ```html
 <a href="https://YOUR-MEDSLOT-HOST">Schedule an appointment</a>
 ```
+
+## Publish on Azure
+
+Use Azure App Service on Linux. The app is a Node server (patient page, staff board, and the Tebra API), so a static host will not run it. Download Microsoft’s BAA from https://aka.ms/BAA and keep it before any real patient data is stored. The agreement is included with the subscription.
+
+In the Azure portal, create a Web App: publish Code, runtime Node 22 LTS, operating system Linux, region near the practice. Choose a Basic B1 plan and leave the instance count at 1. Skip the database add-on. The site name becomes the host, for example `xxeyecare-medslot.azurewebsites.net`.
+
+Application settings, set on that Web App only:
+
+```
+STAFF_CODE=
+PRACTICE_TIMEZONE=America/New_York
+TEBRA_CUSTOMER_KEY=
+TEBRA_USER=
+TEBRA_PASSWORD=
+TEBRA_PRACTICE_NAME=
+MEDSLOT_DATA_DIR=/home/medslot
+SCM_DO_BUILD_DURING_DEPLOYMENT=true
+NPM_CONFIG_PRODUCTION=false
+```
+
+Turn on Always On. Set the startup command to `npm start`. In Deployment Center, connect GitHub repo `ahadden44/online-api-scheduler`, branch `main`.
+
+After it is up, the patient page is `https://YOUR-APP.azurewebsites.net`, staff hours are `https://YOUR-APP.azurewebsites.net/board`, and the Lovable script is `https://YOUR-APP.azurewebsites.net/medslot.js`. Post the real week on the board before patients book. A second practice is a second Web App on the same plan, with that practice’s own settings and script address.
 
 ```
 npm test

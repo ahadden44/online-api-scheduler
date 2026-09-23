@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 43123",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 43123",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-43123}",
     "lint": "eslint",
     "test": "tsx --test lib/availability.test.ts lib/tebra/soap.test.ts lib/seed.test.ts lib/staff-auth.test.ts"
   },

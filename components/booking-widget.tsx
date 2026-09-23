@@ -562,7 +562,7 @@ function WhenStep(props: {
       {props.loading ? <p className="text-sm text-muted-foreground">Checking appointments…</p> : null}
       {props.selectedDate && dayBlocks.length === 0 ? (
         <p className="rounded-2xl bg-secondary p-4 text-sm">
-          {formatLongDate(props.selectedDate)} has no posted hours. Weekline will not invent openings from a repeating office template.
+          {formatLongDate(props.selectedDate)} has no posted hours. MedSlot will not invent openings from a repeating office template.
         </p>
       ) : null}
       {props.selectedDate && dayBlocks.length > 0 && groups.size === 0 ? (
@@ -695,7 +695,7 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
     setError(null);
     const reasonId = visit.reasonId || catalog.reasons.find((reason) => reason.name === visit.reasonName)?.id;
     if (!reasonId) {
-      setError("This visit does not have a type Weekline can move. Cancel it and book again.");
+      setError("This visit does not have a type MedSlot can move. Cancel it and book again.");
       return;
     }
     const monday = mondayOnOrBefore(dateKeyInZone(new Date(), catalog.practice.timezone));

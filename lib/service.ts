@@ -28,7 +28,7 @@ import type {
   StoredAppointment,
   VisitMode,
   VisitReason,
-  WeeklineStore,
+  MedSlotStore,
 } from "@/lib/types";
 
 const CREDENTIALS = ["md", "do", "np", "pa", "dr", "phd", "fnp", "pac"];
@@ -84,7 +84,7 @@ function applyReasonModes(reasons: VisitReason[], modes: Record<string, VisitMod
 }
 
 async function liveCatalog(
-  store: WeeklineStore,
+  store: MedSlotStore,
   config: TebraConfig,
 ): Promise<Omit<Working, "blocks" | "config"> & { hiddenPreviewBlocks: number }> {
   const key = `${config.customerKey}:${config.practiceName}:${config.practiceId ?? ""}`;
@@ -519,7 +519,7 @@ export async function bookVisit(input: {
       ? slot.locationId
       : process.env.TEBRA_DEFAULT_SERVICE_LOCATION_ID || working.locations[0]?.id || null;
   if (!serviceLocationId) throw new ScheduleError("Add a Tebra service location before booking video visits.");
-  const notes = [input.notes?.trim(), "Scheduled from the Weekline widget."].filter(Boolean).join(" ");
+  const notes = [input.notes?.trim(), "Scheduled from the MedSlot widget."].filter(Boolean).join(" ");
   const name = `${reason.name} — ${patient.name}`;
   let id = `apt-${crypto.randomUUID()}`;
   if (working.config) {
@@ -685,7 +685,7 @@ export async function rescheduleVisit(
       end: new Date(slot.end),
       mode: slot.mode,
       name,
-      notes: appointment.notes || "Moved from the Weekline widget.",
+      notes: appointment.notes || "Moved from the MedSlot widget.",
     });
   }
   const updated: StoredAppointment = {

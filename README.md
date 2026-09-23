@@ -1,13 +1,13 @@
-# Weekline
+# MedSlot
 
-Weekline is a scheduling widget for practices whose clinicians do not keep the same hours every week. Tebra’s own online scheduling only knows repeating office hours. Weekline ignores those. Staff post a fresh week — who is where, and for which hours — and patients book inside that week only.
+MedSlot is a scheduling widget for practices whose clinicians do not keep the same hours every week. Tebra’s own online scheduling only knows repeating office hours. MedSlot ignores those. Staff post a fresh week — who is where, and for which hours — and patients book inside that week only.
 
 Appointments still live in Tebra. The widget calls the Tebra SOAP API to read who is already booked, then creates, moves, or cancels the visit there.
 
 ## How a time becomes bookable
 
 1. Someone posts a block on the week board: clinician, place (or video), date, start, and end. A block is that calendar day. It does not roll into next week.
-2. Weekline asks Tebra for appointments in that range (`GetAppointments`) and treats anything that is not cancelled or a no-show as busy. A clinician booked at one place is busy everywhere at that time.
+2. MedSlot asks Tebra for appointments in that range (`GetAppointments`) and treats anything that is not cancelled or a no-show as busy. A clinician booked at one place is busy everywhere at that time.
 3. Openings are cut from the posted block using the visit length (`GetAppointmentReasons`) and the practice’s grid (10, 15, 20, or 30 minutes). A visit cannot cross from one place into another.
 4. Booking calls `CreateAppointment` with `WasCreatedOnline` set. New patients are found with `GetPatients` or added with `CreatePatient`. Moves use `UpdateAppointment`. Cancels use `UpdateAppointmentStatus`.
 
@@ -32,7 +32,7 @@ TEBRA_PRACTICE_ID=
 PRACTICE_TIMEZONE=America/New_York
 ```
 
-`TEBRA_PRACTICE_ID` is optional; Weekline looks it up with `GetPractices` when the name matches. Video visits still need a Tebra service location, so set `TEBRA_DEFAULT_SERVICE_LOCATION_ID` or the practice’s first location is used.
+`TEBRA_PRACTICE_ID` is optional; MedSlot looks it up with `GetPractices` when the name matches. Video visits still need a Tebra service location, so set `TEBRA_DEFAULT_SERVICE_LOCATION_ID` or the practice’s first location is used.
 
 The endpoint is `https://webservice.kareo.com/services/soap/2.1/KareoServices.svc`. Passwords are XML-escaped. Credentials stay on the server.
 
@@ -49,22 +49,20 @@ The patient page is `/`. That is the only address to put on the practice website
 
 ## On the practice website
 
-The practice site and this scheduler are two different addresses. For a practice whose site is already `https://xxeyecare.com`, do not point that domain at this app. That would replace the website. Point a subdomain at this app, then let the existing site embed it.
-
-1. Publish this app.
-2. In the domain settings for `xxeyecare.com`, add `schedule.xxeyecare.com` and point it at that publish (a CNAME to the host, such as Vercel). Patients never type this for booking. It is only where the widget is served from.
-3. In the website repo, on the schedule page (`https://xxeyecare.com/appointments` or whichever page they already have), add:
+No subdomain is required. Publish MedSlot once, on any host. The practice site stays `https://xxeyecare.com`. In the website repo, on the appointments page, paste:
 
 ```html
-<script src="https://schedule.xxeyecare.com/weekline.js" async></script>
+<script src="https://YOUR-MEDSLOT-HOST/medslot.js" async></script>
 ```
 
-Someone opening `https://xxeyecare.com/appointments` stays on the practice site and sees the booking widget in the page. The weekly hours board is not in that script. Staff post hours at `https://schedule.xxeyecare.com/board`. That page asks for `STAFF_CODE`, which is set only on the scheduler (for example a Vercel environment variable). Knowing the address is not enough to change hours. Do not put the board link or the code on the public site.
+`YOUR-MEDSLOT-HOST` is wherever this app is published, such as a Vercel address. It does not have to be part of `xxeyecare.com`. A patient who opens `https://xxeyecare.com/appointments` stays on that site and sees booking in the page. The weekly hours board is not in the script.
 
-A new tab, instead of an embed, is a normal link on `xxeyecare.com`:
+Staff post hours at `https://YOUR-MEDSLOT-HOST/board`. That page asks for `STAFF_CODE`, set only on the MedSlot host. Do not put the board link or the code on the practice site.
+
+A new tab, instead of an embed, is a normal link:
 
 ```html
-<a href="https://schedule.xxeyecare.com">Schedule an appointment</a>
+<a href="https://YOUR-MEDSLOT-HOST">Schedule an appointment</a>
 ```
 
 ```

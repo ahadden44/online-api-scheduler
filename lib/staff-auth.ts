@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { ScheduleError } from "@/lib/service";
 
-export const STAFF_COOKIE = "weekline_staff";
+export const STAFF_COOKIE = "medslot_staff";
 
 export function staffCode(): string | null {
   const code = process.env.STAFF_CODE?.trim();
@@ -9,13 +9,13 @@ export function staffCode(): string | null {
 }
 
 export function codesMatch(input: string, expected: string): boolean {
-  const left = createHmac("sha256", "weekline-staff-login").update(input).digest();
-  const right = createHmac("sha256", "weekline-staff-login").update(expected).digest();
+  const left = createHmac("sha256", "medslot-staff-login").update(input).digest();
+  const right = createHmac("sha256", "medslot-staff-login").update(expected).digest();
   return timingSafeEqual(left, right);
 }
 
 export function staffCookieValue(code: string): string {
-  return createHmac("sha256", code).update("weekline-staff-v1").digest("base64url");
+  return createHmac("sha256", code).update("medslot-staff-v1").digest("base64url");
 }
 
 export function requestIsStaff(cookieHeader: string | null): boolean {

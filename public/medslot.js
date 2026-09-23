@@ -10,7 +10,7 @@
   window.addEventListener("message", function (event) {
     if (event.origin !== origin || event.source !== frame.contentWindow) return;
     var data = event.data;
-    if (!data || data.source !== "weekline") return;
+    if (!data || data.source !== "medslot") return;
     var height = Number(data.height);
     if (height > 320 && height < 8000) frame.style.height = Math.ceil(height) + "px";
   });

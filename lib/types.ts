@@ -70,7 +70,7 @@ export type StoredAppointment = {
   origin: "preview" | "widget" | "tebra";
 };
 
-export type WeeklineStore = {
+export type MedSlotStore = {
   version: 1;
   practice: PracticeProfile;
   providers: Provider[];

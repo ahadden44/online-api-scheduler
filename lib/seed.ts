@@ -1,4 +1,4 @@
-import type { ScheduleBlock, StoredAppointment, WeeklineStore } from "@/lib/types";
+import type { ScheduleBlock, StoredAppointment, MedSlotStore } from "@/lib/types";
 import { addDays, dateKeyInZone, mondayOnOrBefore, zonedDateTimeToUtc } from "@/lib/time";
 
 const TIMEZONE = process.env.PRACTICE_TIMEZONE || "America/New_York";
@@ -150,7 +150,7 @@ function previewHolds(blocks: ScheduleBlock[], now: Date): StoredAppointment[] {
   return holds;
 }
 
-export function createPreviewStore(now = new Date()): WeeklineStore {
+export function createPreviewStore(now = new Date()): MedSlotStore {
   const today = dateKeyInZone(now, TIMEZONE);
   const thisMonday = mondayOnOrBefore(today);
   const nextMonday = addDays(thisMonday, 7);

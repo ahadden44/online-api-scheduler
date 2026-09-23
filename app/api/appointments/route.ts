@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const visits = await lookupVisits({
+    const lookup = await lookupVisits({
       firstName: url.searchParams.get("firstName") ?? "",
       lastName: url.searchParams.get("lastName") ?? "",
       dob: url.searchParams.get("dob") ?? "",
       patientId: url.searchParams.get("patientId") || undefined,
     });
-    return NextResponse.json({ visits });
+    return NextResponse.json(lookup);
   } catch (error) {
     return fail(error);
   }

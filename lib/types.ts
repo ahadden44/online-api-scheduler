@@ -103,6 +103,13 @@ export type BusyInterval = {
   reasonName: string;
 };
 
+export type SampleChart = {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  reasonName: string;
+};
+
 export type Catalog = {
   mode: "preview" | "live";
   practice: PracticeProfile;
@@ -110,4 +117,6 @@ export type Catalog = {
   locations: Location[];
   reasons: VisitReason[];
   notice: string | null;
+  /** Preview charts that currently have an upcoming visit. Empty once Tebra is connected. */
+  sampleCharts: SampleChart[];
 };

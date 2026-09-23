@@ -162,6 +162,28 @@ export function toCatalog(working: Working): Catalog {
     locations: working.locations,
     reasons: working.reasons,
     notice: working.notice,
+    sampleCharts: [],
+  };
+}
+
+export async function loadCatalog(): Promise<Catalog> {
+  const working = await loadWorking();
+  const catalog = toCatalog(working);
+  if (working.mode !== "preview") return catalog;
+  const store = await readStore();
+  const horizon = Date.now() - 60 * 60_000;
+  const reasonByPatient = new Map<string, string>();
+  for (const appointment of [...store.appointments].sort((a, b) => a.start.localeCompare(b.start))) {
+    if (!isBlockingStatus(appointment.status)) continue;
+    if (Date.parse(appointment.end) < horizon) continue;
+    if (!reasonByPatient.has(appointment.patientId)) reasonByPatient.set(appointment.patientId, appointment.reasonName);
+  }
+  return {
+    ...catalog,
+    sampleCharts: store.patients.flatMap((patient) => {
+      const reasonName = reasonByPatient.get(patient.id);
+      return reasonName ? [{ firstName: patient.firstName, lastName: patient.lastName, dob: patient.dob, reasonName }] : [];
+    }),
   };
 }
 
@@ -538,7 +560,12 @@ export async function bookVisit(input: {
   return present(working, stored);
 }
 
-export async function lookupVisits(identity: Identity): Promise<BookedVisit[]> {
+export type VisitLookup = {
+  matched: boolean;
+  visits: BookedVisit[];
+};
+
+export async function lookupVisits(identity: Identity): Promise<VisitLookup> {
   const person = cleanIdentity(identity);
   const working = await loadWorking();
   const today = dateKeyInZone(new Date(), working.practice.timezone);
@@ -560,11 +587,12 @@ export async function lookupVisits(identity: Identity): Promise<BookedVisit[]> {
     patientIds = (await findPatients(working.config, person)).map((patient) => patient.id);
     if (person.patientId) patientIds = patientIds.filter((id) => id === person.patientId);
   }
-  return appointments
+  const visits = appointments
     .filter((appointment) => patientIds.includes(appointment.patientId) && isBlockingStatus(appointment.status))
     .filter((appointment) => Date.parse(appointment.end) >= Date.now() - 60 * 60_000)
     .sort((a, b) => a.start.localeCompare(b.start))
     .map((appointment) => present(working, appointment));
+  return { matched: patientIds.length > 0, visits };
 }
 
 async function ownedAppointment(identity: Identity, appointmentId: string): Promise<{ working: Working; appointment: StoredAppointment; patientId: string }> {

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/http";
-import { loadWorking, toCatalog } from "@/lib/service";
+import { loadCatalog } from "@/lib/service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const working = await loadWorking();
-    return NextResponse.json(toCatalog(working));
+    return NextResponse.json(await loadCatalog());
   } catch (error) {
     return fail(error);
   }

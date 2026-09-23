@@ -1,6 +1,5 @@
 import type { ScheduleBlock, StoredAppointment, WeeklineStore } from "@/lib/types";
-import { addDays, mondayOnOrBefore, zonedDateTimeToUtc } from "@/lib/time";
-import { dateKeyInZone } from "@/lib/time";
+import { addDays, dateKeyInZone, mondayOnOrBefore, zonedDateTimeToUtc } from "@/lib/time";
 
 const TIMEZONE = process.env.PRACTICE_TIMEZONE || "America/New_York";
 
@@ -97,9 +96,14 @@ function previewVisit(input: {
   };
 }
 
-function previewHolds(upcoming: ScheduleBlock[], now: Date): StoredAppointment[] {
+function previewHolds(blocks: ScheduleBlock[], now: Date): StoredAppointment[] {
+  const today = dateKeyInZone(now, TIMEZONE);
+  // Sample visits sit on a later calendar day so a same-day hold cannot age out of "upcoming" during the afternoon.
+  const later = blocks
+    .filter((block) => block.date > today)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes);
   const holds: StoredAppointment[] = [];
-  const elenaBlock = upcoming.find((block) => block.endMinutes - block.startMinutes >= 80 && block.mode === "InOffice");
+  const elenaBlock = later.find((block) => block.endMinutes - block.startMinutes >= 80 && block.mode === "InOffice");
   if (elenaBlock) {
     const startMinutes = elenaBlock.startMinutes + 60;
     if (zonedDateTimeToUtc(elenaBlock.date, startMinutes, TIMEZONE).getTime() > now.getTime()) {
@@ -120,7 +124,7 @@ function previewHolds(upcoming: ScheduleBlock[], now: Date): StoredAppointment[]
       );
     }
   }
-  const samirBlock = upcoming.find(
+  const samirBlock = later.find(
     (block) => block.providerId === "prov-ellis" && block.mode === "InOffice" && block.id !== elenaBlock?.id && block.endMinutes - block.startMinutes >= 90,
   );
   if (samirBlock) {
@@ -151,9 +155,6 @@ export function createPreviewStore(now = new Date()): WeeklineStore {
   const thisMonday = mondayOnOrBefore(today);
   const nextMonday = addDays(thisMonday, 7);
   const blocks = [...materialize(thisMonday, THIS_WEEK, "preview"), ...materialize(nextMonday, NEXT_WEEK, "preview")];
-  const upcoming = blocks
-    .filter((block) => zonedDateTimeToUtc(block.date, block.endMinutes, TIMEZONE).getTime() > now.getTime() + 45 * 60_000)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes);
 
   return {
     version: 1,
@@ -244,6 +245,6 @@ export function createPreviewStore(now = new Date()): WeeklineStore {
         email: "samir.adeyemi@example.com",
       },
     ],
-    appointments: previewHolds(upcoming, now),
+    appointments: previewHolds(blocks, now),
   };
 }

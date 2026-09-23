@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addDays, dateKeyInZone, formatInstant, formatLongDate, formatMinutes, formatMonthDay, mondayOnOrBefore, weekdayName } from "@/lib/time";
 import type { BookedVisit } from "@/lib/service";
-import type { Catalog, OpenSlot, ScheduleBlock, VisitReason } from "@/lib/types";
+import type { Catalog, OpenSlot, SampleChart, ScheduleBlock, VisitReason } from "@/lib/types";
 
 const VIDEO = "#6d4d86";
 
@@ -629,14 +629,30 @@ function Done({ visit, timezone, onAgain }: { visit: BookedVisit; timezone: stri
   );
 }
 
+function sampleLine(chart: SampleChart): string {
+  return `Preview chart: ${chart.firstName} ${chart.lastName}, ${chart.dob}, has a ${chart.reasonName.toLowerCase()} already on the books.`;
+}
+
 function ManagePanel({ catalog }: { catalog: Catalog }) {
   const [form, setForm] = useState({ firstName: "", lastName: "", dob: "" });
-  const [visits, setVisits] = useState<BookedVisit[] | null>(null);
+  const [result, setResult] = useState<{ matched: boolean; visits: BookedVisit[] } | null>(null);
+  const [samples, setSamples] = useState(catalog.sampleCharts);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [moving, setMoving] = useState<BookedVisit | null>(null);
   const [options, setOptions] = useState<OpenSlot[]>([]);
   const [busy, setBusy] = useState(false);
+
+  function dropSampleIfEmpty(visits: BookedVisit[]) {
+    if (visits.length > 0) return;
+    const first = form.firstName.trim().toLowerCase();
+    const last = form.lastName.trim().toLowerCase();
+    setSamples((current) =>
+      current.filter(
+        (chart) => chart.firstName.toLowerCase() !== first || chart.lastName.toLowerCase() !== last || chart.dob !== form.dob,
+      ),
+    );
+  }
 
   async function lookup(event: React.FormEvent) {
     event.preventDefault();
@@ -645,8 +661,9 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
     setMoving(null);
     try {
       const params = new URLSearchParams(form);
-      const result = await readJson<{ visits: BookedVisit[] }>(await fetch(`/api/appointments?${params}`));
-      setVisits(result.visits);
+      const lookupResult = await readJson<{ matched: boolean; visits: BookedVisit[] }>(await fetch(`/api/appointments?${params}`));
+      setResult(lookupResult);
+      if (lookupResult.matched) dropSampleIfEmpty(lookupResult.visits);
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
@@ -663,7 +680,9 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       }));
-      setVisits((current) => current?.filter((item) => item.id !== visit.id) ?? []);
+      const remaining = result?.visits.filter((item) => item.id !== visit.id) ?? [];
+      setResult({ matched: result?.matched ?? true, visits: remaining });
+      dropSampleIfEmpty(remaining);
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
@@ -701,7 +720,10 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
           body: JSON.stringify({ ...form, start: slot.start, providerId: slot.providerId, locationId: slot.locationId, mode: slot.mode }),
         }),
       );
-      setVisits((current) => current?.map((item) => (item.id === moving.id ? result.visit : item)) ?? [result.visit]);
+      setResult((current) => ({
+        matched: current?.matched ?? true,
+        visits: current?.visits.map((item) => (item.id === moving.id ? result.visit : item)) ?? [result.visit],
+      }));
       setMoving(null);
     } catch (caught) {
       setError((caught as Error).message);
@@ -714,9 +736,11 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
     <div className="space-y-4 px-5 py-6 md:px-8">
       <h2 className="text-2xl">Find a visit</h2>
       <p className="text-sm text-muted-foreground">Use the name and date of birth on the chart. You can cancel or move it into another posted hour.</p>
-      {catalog.mode === "preview" ? (
-        <p className="text-sm text-muted-foreground">Preview chart: Elena Vasquez, 1988-04-12, has a follow-up already on the books.</p>
-      ) : null}
+      {samples.map((chart) => (
+        <p key={`${chart.firstName}-${chart.lastName}-${chart.dob}`} className="text-sm text-muted-foreground">
+          {sampleLine(chart)}
+        </p>
+      ))}
       <form className="grid gap-3 sm:grid-cols-4" onSubmit={lookup}>
         <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
         <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
@@ -728,9 +752,13 @@ function ManagePanel({ catalog }: { catalog: Catalog }) {
         </div>
       </form>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {visits && visits.length === 0 ? <p className="text-sm">No upcoming visits matched that chart.</p> : null}
+      {result && result.visits.length === 0 ? (
+        <p className="text-sm">
+          {result.matched ? "That chart is on file, and it has no upcoming visits." : "No chart matched that name and date of birth."}
+        </p>
+      ) : null}
       <div className="space-y-3">
-        {visits?.map((item) => (
+        {result?.visits.map((item) => (
           <article key={item.id} className="rounded-2xl bg-background p-4 ring-1 ring-border">
             <p className="font-medium">{item.reasonName}</p>
             <p className="text-sm">{formatInstant(item.start, catalog.practice.timezone)}</p>

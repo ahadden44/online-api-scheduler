@@ -49,19 +49,23 @@ The patient page is `/`. That is the only address to put on the practice website
 
 ## On the practice website
 
-Leave this app in its own repo. It holds the Tebra credentials and the week board. The practice website repo only adds the embed. Patients get scheduling inside the existing site. The weekly hours page is not part of that snippet, and `/board` cannot be framed.
+The practice site and this scheduler are two different addresses. For a practice whose site is already `https://xxeyecare.com`, do not point that domain at this app. That would replace the website. Point a subdomain at this app, then let the existing site embed it.
+
+1. Publish this app.
+2. In the domain settings for `xxeyecare.com`, add `schedule.xxeyecare.com` and point it at that publish (a CNAME to the host, such as Vercel). Patients never type this for booking. It is only where the widget is served from.
+3. In the website repo, on the schedule page (`https://xxeyecare.com/appointments` or whichever page they already have), add:
 
 ```html
-<script src="https://schedule.example.com/weekline.js" async></script>
+<script src="https://schedule.xxeyecare.com/weekline.js" async></script>
 ```
 
-A plain link still works when a new tab is enough:
+Someone opening `https://xxeyecare.com/appointments` stays on the practice site and sees the booking widget in the page. The weekly hours board is not in that script. Staff post hours at `https://schedule.xxeyecare.com/board` and do not link that from the public site.
+
+A new tab, instead of an embed, is a normal link on `xxeyecare.com`:
 
 ```html
-<a href="https://schedule.example.com">Schedule an appointment</a>
+<a href="https://schedule.xxeyecare.com">Schedule an appointment</a>
 ```
-
-Staff post hours at `https://schedule.example.com/board`. Do not put that address on the public site.
 
 ```
 npm test

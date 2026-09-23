@@ -13,8 +13,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Weekline",
-  description: "Book a visit from hours posted week by week, synced with Tebra appointments.",
+  title: "Schedule a visit",
+  description: "Book a visit from hours posted for that week.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

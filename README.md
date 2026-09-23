@@ -45,7 +45,15 @@ npm install
 npm run dev
 ```
 
-The booking widget is `/`. The week board is `/board`.
+The patient page is `/`. That is the only address to put on the practice website. The week board is `/board`, and it is not linked from the patient page.
+
+## On the practice website
+
+Publish this app, then add a button on the practice site that opens the patient address in a new tab. Do not link `/board`. Staff keep that address as their own bookmark and post each week there.
+
+```html
+<a href="https://schedule.example.com">Schedule an appointment</a>
+```
 
 ```
 npm test

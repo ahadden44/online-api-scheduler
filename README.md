@@ -70,7 +70,7 @@ npm install
 npm run dev
 ```
 
-The patient page is `/`. That is the only address to put on the practice website. The week board is `/board`, and it is not linked from the patient page.
+The patient page is `/`. That is the only address to put on the practice website. Patients can book a new visit. Change and cancel are kept in `components/manage-visit.tsx` and `lib/manage-visit-routes.ts` and are not shown or routed. The week board is `/board`, and it is not linked from the patient page.
 
 ## On the practice website
 

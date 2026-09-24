@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addDays, dateKeyInZone, formatInstant, formatLongDate, formatMinutes, formatMonthDay, mondayOnOrBefore, weekdayName } from "@/lib/time";
 import type { BookedVisit } from "@/lib/service";
-import type { Catalog, OpenSlot, SampleChart, ScheduleBlock, VisitReason } from "@/lib/types";
+import type { Catalog, OpenSlot, ScheduleBlock, VisitReason } from "@/lib/types";
 
 const VIDEO = "#6d4d86";
 
@@ -48,7 +48,6 @@ function placeMatches(slot: OpenSlot, place: Place | null): boolean {
 export function BookingWidget() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"book" | "manage">("book");
   const [step, setStep] = useState<"visit" | "place" | "when" | "details" | "done">("visit");
   const [reasonId, setReasonId] = useState<string | null>(null);
   const [place, setPlace] = useState<Place | null>(null);
@@ -183,23 +182,13 @@ export function BookingWidget() {
             Openings follow hours posted for that exact week. A clinician at one office in the morning can be somewhere else after lunch, and next week can be different.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button type="button" variant={panel === "book" ? "default" : "outline"} onClick={() => setPanel("book")}>
-            Book a visit
-          </Button>
-          <Button type="button" variant={panel === "manage" ? "default" : "outline"} onClick={() => setPanel("manage")}>
-            Change a visit
-          </Button>
-        </div>
       </div>
 
       {catalog.notice ? (
         <p className="border-b border-border bg-secondary/70 px-5 py-3 text-sm text-secondary-foreground md:px-8">{catalog.notice}</p>
       ) : null}
 
-      {panel === "manage" ? (
-        <ManagePanel catalog={catalog} />
-      ) : shownStep === "done" && visit ? (
+      {shownStep === "done" && visit ? (
         <Done
           visit={catalog ? visit : visit}
           timezone={catalog.practice.timezone}
@@ -629,167 +618,6 @@ function Done({ visit, timezone, onAgain }: { visit: BookedVisit; timezone: stri
       <Button type="button" className="mt-6" variant="outline" onClick={onAgain}>
         Book another visit
       </Button>
-    </div>
-  );
-}
-
-function sampleLine(chart: SampleChart): string {
-  return `Preview chart: ${chart.firstName} ${chart.lastName}, ${chart.dob}, has a ${chart.reasonName.toLowerCase()} already on the books.`;
-}
-
-function ManagePanel({ catalog }: { catalog: Catalog }) {
-  const [form, setForm] = useState({ firstName: "", lastName: "", dob: "" });
-  const [result, setResult] = useState<{ matched: boolean; visits: BookedVisit[] } | null>(null);
-  const [samples, setSamples] = useState(catalog.sampleCharts);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [moving, setMoving] = useState<BookedVisit | null>(null);
-  const [options, setOptions] = useState<OpenSlot[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  function dropSampleIfEmpty(visits: BookedVisit[]) {
-    if (visits.length > 0) return;
-    const first = form.firstName.trim().toLowerCase();
-    const last = form.lastName.trim().toLowerCase();
-    setSamples((current) =>
-      current.filter(
-        (chart) => chart.firstName.toLowerCase() !== first || chart.lastName.toLowerCase() !== last || chart.dob !== form.dob,
-      ),
-    );
-  }
-
-  async function lookup(event: React.FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMoving(null);
-    try {
-      const params = new URLSearchParams(form);
-      const lookupResult = await readJson<{ matched: boolean; visits: BookedVisit[] }>(await fetch(`/api/appointments?${params}`));
-      setResult(lookupResult);
-      if (lookupResult.matched) dropSampleIfEmpty(lookupResult.visits);
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function cancel(visit: BookedVisit) {
-    setBusy(true);
-    setError(null);
-    try {
-      await readJson(await fetch(`/api/appointments/${visit.id}/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      }));
-      const remaining = result?.visits.filter((item) => item.id !== visit.id) ?? [];
-      setResult({ matched: result?.matched ?? true, visits: remaining });
-      dropSampleIfEmpty(remaining);
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function startMove(visit: BookedVisit) {
-    setMoving(visit);
-    setError(null);
-    const reasonId = visit.reasonId || catalog.reasons.find((reason) => reason.name === visit.reasonName)?.id;
-    if (!reasonId) {
-      setError("This visit does not have a type MedSlot can move. Cancel it and book again.");
-      return;
-    }
-    const monday = mondayOnOrBefore(dateKeyInZone(new Date(), catalog.practice.timezone));
-    const params = new URLSearchParams({ from: monday, to: addDays(monday, 20), reasonId });
-    try {
-      const result = await readJson<{ slots: OpenSlot[] }>(await fetch(`/api/availability?${params}`));
-      setOptions(result.slots.slice(0, 12));
-    } catch (caught) {
-      setError((caught as Error).message);
-    }
-  }
-
-  async function moveTo(slot: OpenSlot) {
-    if (!moving) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await readJson<{ visit: BookedVisit }>(
-        await fetch(`/api/appointments/${moving.id}/reschedule`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...form, start: slot.start, providerId: slot.providerId, locationId: slot.locationId, mode: slot.mode }),
-        }),
-      );
-      setResult((current) => ({
-        matched: current?.matched ?? true,
-        visits: current?.visits.map((item) => (item.id === moving.id ? result.visit : item)) ?? [result.visit],
-      }));
-      setMoving(null);
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-4 px-5 py-6 md:px-8">
-      <h2 className="text-2xl">Find a visit</h2>
-      <p className="text-sm text-muted-foreground">Use the name and date of birth on the chart. You can cancel or move it into another posted hour.</p>
-      {samples.map((chart) => (
-        <p key={`${chart.firstName}-${chart.lastName}-${chart.dob}`} className="text-sm text-muted-foreground">
-          {sampleLine(chart)}
-        </p>
-      ))}
-      <form className="grid gap-3 sm:grid-cols-4" onSubmit={lookup}>
-        <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
-        <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
-        <Field label="Date of birth" type="date" value={form.dob} onChange={(dob) => setForm({ ...form, dob })} />
-        <div className="flex items-end">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Looking…" : "Find visits"}
-          </Button>
-        </div>
-      </form>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {result && result.visits.length === 0 ? (
-        <p className="text-sm">
-          {result.matched ? "That chart is on file, and it has no upcoming visits." : "No chart matched that name and date of birth."}
-        </p>
-      ) : null}
-      <div className="space-y-3">
-        {result?.visits.map((item) => (
-          <article key={item.id} className="rounded-2xl bg-background p-4 ring-1 ring-border">
-            <p className="font-medium">{item.reasonName}</p>
-            <p className="text-sm">{formatInstant(item.start, catalog.practice.timezone)}</p>
-            <p className="text-sm text-muted-foreground">
-              {item.providerName} · {item.locationName}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => startMove(item)}>
-                Move
-              </Button>
-              <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => cancel(item)}>
-                Cancel
-              </Button>
-            </div>
-            {moving?.id === item.id ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {options.length === 0 ? <p className="text-sm text-muted-foreground">No other posted hours are open.</p> : null}
-                {options.map((slot) => (
-                  <Button key={`${slot.start}-${slot.providerId}`} type="button" size="sm" variant="secondary" disabled={busy} onClick={() => moveTo(slot)}>
-                    {formatInstant(slot.start, catalog.practice.timezone)}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
-          </article>
-        ))}
-      </div>
     </div>
   );
 }

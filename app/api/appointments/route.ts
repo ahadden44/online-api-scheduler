@@ -1,24 +1,9 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/http";
-import { bookVisit, lookupVisits } from "@/lib/service";
+import { bookVisit } from "@/lib/service";
 import type { VisitMode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const lookup = await lookupVisits({
-      firstName: url.searchParams.get("firstName") ?? "",
-      lastName: url.searchParams.get("lastName") ?? "",
-      dob: url.searchParams.get("dob") ?? "",
-      patientId: url.searchParams.get("patientId") || undefined,
-    });
-    return NextResponse.json(lookup);
-  } catch (error) {
-    return fail(error);
-  }
-}
 
 export async function POST(request: Request) {
   try {

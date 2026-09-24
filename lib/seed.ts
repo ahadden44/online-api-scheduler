@@ -103,7 +103,7 @@ function previewHolds(blocks: ScheduleBlock[], now: Date): StoredAppointment[] {
     .filter((block) => block.date > today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes);
   const holds: StoredAppointment[] = [];
-  const elenaBlock = later.find((block) => block.endMinutes - block.startMinutes >= 80 && block.mode === "InOffice");
+  const elenaBlock = later.find((block) => block.endMinutes - block.startMinutes >= 90 && block.mode === "InOffice");
   if (elenaBlock) {
     const startMinutes = elenaBlock.startMinutes + 60;
     if (zonedDateTimeToUtc(elenaBlock.date, startMinutes, TIMEZONE).getTime() > now.getTime()) {
@@ -112,14 +112,14 @@ function previewHolds(blocks: ScheduleBlock[], now: Date): StoredAppointment[] {
           id: "apt-preview-elena",
           providerId: elenaBlock.providerId,
           locationId: elenaBlock.locationId,
-          reasonId: "reason-follow",
-          reasonName: "Follow-up",
+          reasonId: "reason-exam",
+          reasonName: "Comprehensive Eye Exam",
           mode: "InOffice",
           patientId: "pat-elena",
           patientName: "Elena Vasquez",
           date: elenaBlock.date,
           startMinutes,
-          duration: 20,
+          duration: 30,
         }),
       );
     }
@@ -135,8 +135,8 @@ function previewHolds(blocks: ScheduleBlock[], now: Date): StoredAppointment[] {
           id: "apt-preview-samir",
           providerId: samirBlock.providerId,
           locationId: samirBlock.locationId,
-          reasonId: "reason-well",
-          reasonName: "Well-child visit",
+          reasonId: "reason-exam",
+          reasonName: "Comprehensive Eye Exam",
           mode: "InOffice",
           patientId: "pat-samir",
           patientName: "Samir Adeyemi",
@@ -164,7 +164,7 @@ export function createPreviewStore(now = new Date()): MedSlotStore {
       timezone: TIMEZONE,
       phone: "(410) 555-0148",
       address: "410 Pier Street, Baltimore, MD",
-      slotMinutes: 20,
+      slotMinutes: 30,
       leadMinutes: 30,
     },
     providers: [
@@ -197,32 +197,11 @@ export function createPreviewStore(now = new Date()): MedSlotStore {
     ],
     reasons: [
       {
-        id: "reason-new",
-        name: "New patient visit",
-        durationMinutes: 40,
-        modes: ["InOffice"],
-        description: "First visit at whichever office that clinician is posted to.",
-      },
-      {
-        id: "reason-follow",
-        name: "Follow-up",
-        durationMinutes: 20,
-        modes: ["InOffice", "Telehealth"],
-        description: "A short return visit, in the office or by video when video hours are posted.",
-      },
-      {
-        id: "reason-well",
-        name: "Well-child visit",
+        id: "reason-exam",
+        name: "Comprehensive Eye Exam",
         durationMinutes: 30,
         modes: ["InOffice"],
-        description: "Checkup where pediatrics is posted that day, including the school clinic.",
-      },
-      {
-        id: "reason-video",
-        name: "Video visit",
-        durationMinutes: 20,
-        modes: ["Telehealth"],
-        description: "Only during hours marked as video. Those hours move week to week too.",
+        description: "A 30-minute exam at the office where that clinician is posted that day.",
       },
     ],
     reasonModes: {},

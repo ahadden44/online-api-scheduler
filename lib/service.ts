@@ -76,6 +76,20 @@ function namesMatch(left: string, right: string): boolean {
   return a.length > 0 && a === b;
 }
 
+function eyeExamOnly(reasons: VisitReason[]): VisitReason[] {
+  const match = reasons.find((reason) => /comprehensive/i.test(reason.name) && /eye/i.test(reason.name));
+  if (!match) return [];
+  return [
+    {
+      ...match,
+      name: "Comprehensive Eye Exam",
+      durationMinutes: 30,
+      modes: ["InOffice"],
+      description: "A 30-minute exam at the office where that clinician is posted that day.",
+    },
+  ];
+}
+
 function applyReasonModes(reasons: VisitReason[], modes: Record<string, VisitMode[]>): VisitReason[] {
   return reasons.map((reason) => ({
     ...reason,
@@ -109,11 +123,14 @@ async function liveCatalog(
       phone: practice.phone || store.practice.phone,
       address: practice.address || store.practice.address,
       timezone: process.env.PRACTICE_TIMEZONE?.trim() || store.practice.timezone,
+      slotMinutes: 30,
     },
     providers,
     locations,
-    reasons: applyReasonModes(reasons, store.reasonModes),
-    notice: null,
+    reasons: applyReasonModes(eyeExamOnly(reasons), store.reasonModes),
+    notice: eyeExamOnly(reasons).length
+      ? null
+      : "Add a Tebra appointment reason named Comprehensive Eye Exam. MedSlot books that visit for 30 minutes.",
     practiceId: practice.id,
     hiddenPreviewBlocks: store.blocks.filter((block) => block.origin === "preview").length,
   };
@@ -127,7 +144,11 @@ export async function loadWorking(): Promise<Working> {
   if (!config) {
     return {
       mode: "preview",
-      practice: { ...store.practice, timezone: process.env.PRACTICE_TIMEZONE?.trim() || store.practice.timezone },
+      practice: {
+        ...store.practice,
+        timezone: process.env.PRACTICE_TIMEZONE?.trim() || store.practice.timezone,
+        slotMinutes: 30,
+      },
       providers: store.providers,
       locations: store.locations,
       reasons: applyReasonModes(store.reasons, store.reasonModes),

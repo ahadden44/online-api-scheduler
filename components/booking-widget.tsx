@@ -72,21 +72,22 @@ export function BookingWidget() {
       .catch((error: Error) => setLoadError(error.message));
   }, []);
 
-  const reason = catalog?.reasons.find((item) => item.id === reasonId) ?? null;
+  const activeReasonId = reasonId ?? (catalog?.reasons.length === 1 ? catalog.reasons[0].id : null);
+  const reason = catalog?.reasons.find((item) => item.id === activeReasonId) ?? null;
   const today = catalog ? dateKeyInZone(new Date(), catalog.practice.timezone) : "";
   const thisMonday = today ? mondayOnOrBefore(today) : "";
   const weekMonday = thisMonday ? addDays(thisMonday, weekIndex * 7) : "";
 
-  const scheduleKey = reasonId && thisMonday ? `${reasonId}:${thisMonday}` : null;
+  const scheduleKey = activeReasonId && thisMonday ? `${activeReasonId}:${thisMonday}` : null;
   const loadingTimes = Boolean(scheduleKey && loadedKey !== scheduleKey && !scheduleError);
 
   useEffect(() => {
-    if (!scheduleKey || !thisMonday || !reasonId) return;
+    if (!scheduleKey || !thisMonday || !activeReasonId) return;
     const controller = new AbortController();
     const params = new URLSearchParams({
       from: thisMonday,
       to: addDays(thisMonday, 20),
-      reasonId,
+      reasonId: activeReasonId,
     });
     fetch(`/api/availability?${params}`, { signal: controller.signal })
       .then((response) => readJson<{ blocks: ScheduleBlock[]; slots: OpenSlot[] }>(response))
@@ -100,9 +101,10 @@ export function BookingWidget() {
         if (error.name !== "AbortError") setScheduleError(error.message);
       });
     return () => controller.abort();
-  }, [scheduleKey, thisMonday, reasonId]);
+  }, [scheduleKey, thisMonday, activeReasonId]);
 
   const weekDates = useMemo(() => (weekMonday ? Array.from({ length: 7 }, (_, index) => addDays(weekMonday, index)) : []), [weekMonday]);
+  const shownStep = catalog && catalog.reasons.length === 1 && step === "visit" ? "place" : step;
 
   const visibleSlots = slots.filter((slot) => placeMatches(slot, place));
   const activeBlocks = loadingTimes ? [] : blocks;
@@ -197,7 +199,7 @@ export function BookingWidget() {
 
       {panel === "manage" ? (
         <ManagePanel catalog={catalog} />
-      ) : step === "done" && visit ? (
+      ) : shownStep === "done" && visit ? (
         <Done
           visit={catalog ? visit : visit}
           timezone={catalog.practice.timezone}
@@ -212,16 +214,16 @@ export function BookingWidget() {
         <div className="grid gap-0 lg:grid-cols-[280px_1fr]">
           <aside className="border-b border-border px-5 py-5 lg:border-r lg:border-b-0 md:px-8 lg:px-6">
             <ol className="space-y-3 text-sm">
-              <StepMark n={1} label="Visit" active={step === "visit"} done={step !== "visit"} value={reason?.name} />
-              <StepMark n={2} label="Place" active={step === "place"} done={step === "when" || step === "details"} value={placeLabel(place, catalog)} />
+              <StepMark n={1} label="Visit" active={shownStep === "visit"} done={shownStep !== "visit"} value={reason?.name} />
+              <StepMark n={2} label="Place" active={shownStep === "place"} done={shownStep === "when" || shownStep === "details"} value={placeLabel(place, catalog)} />
               <StepMark
                 n={3}
                 label="Time"
-                active={step === "when"}
-                done={step === "details"}
+                active={shownStep === "when"}
+                done={shownStep === "details"}
                 value={selectedSlot ? formatInstant(selectedSlot.start, catalog.practice.timezone) : undefined}
               />
-              <StepMark n={4} label="Your details" active={step === "details"} done={false} />
+              <StepMark n={4} label="Your details" active={shownStep === "details"} done={false} />
             </ol>
             {reason ? (
               <p className="mt-6 text-sm text-muted-foreground">
@@ -231,7 +233,7 @@ export function BookingWidget() {
           </aside>
 
           <div className="px-5 py-5 md:px-8 md:py-7">
-            {step === "visit" ? (
+            {shownStep === "visit" ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {catalog.reasons.map((item) => (
                   <button
@@ -253,19 +255,19 @@ export function BookingWidget() {
               </div>
             ) : null}
 
-            {step === "place" && reason ? (
+            {shownStep === "place" && reason ? (
               <PlaceStep
                 catalog={catalog}
                 reason={reason}
                 blocks={activeBlocks.filter((block) => block.date >= thisMonday && block.date <= addDays(thisMonday, 6))}
                 loading={loadingTimes}
                 error={scheduleError}
-                onBack={() => setStep("visit")}
+                onBack={catalog.reasons.length === 1 ? null : () => setStep("visit")}
                 onChoose={choosePlace}
               />
             ) : null}
 
-            {step === "when" && reason && place ? (
+            {shownStep === "when" && reason && place ? (
               <WhenStep
                 catalog={catalog}
                 blocks={activeBlocks}
@@ -287,7 +289,7 @@ export function BookingWidget() {
               />
             ) : null}
 
-            {step === "details" && selectedSlot && reason ? (
+            {shownStep === "details" && selectedSlot && reason ? (
               <form
                 className="space-y-4"
                 onSubmit={(event) => {
@@ -416,7 +418,7 @@ function PlaceStep({
   blocks: ScheduleBlock[];
   loading: boolean;
   error: string | null;
-  onBack: () => void;
+  onBack: (() => void) | null;
   onChoose: (place: Place) => void;
 }) {
   const locations = catalog.locations.filter(
@@ -464,9 +466,11 @@ function PlaceStep({
           </button>
         ) : null}
       </div>
-      <Button type="button" variant="outline" onClick={onBack}>
-        Back
-      </Button>
+      {onBack ? (
+        <Button type="button" variant="outline" onClick={onBack}>
+          Back
+        </Button>
+      ) : null}
     </div>
   );
 }

@@ -138,18 +138,6 @@ export function WeekBoard() {
     }
   }
 
-  async function setSlot(minutes: number) {
-    if (!catalog) return;
-    const result = await readJson<{ practice: Catalog["practice"] }>(
-      await fetch("/api/practice", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotMinutes: minutes }),
-      }),
-    );
-    setCatalog({ ...catalog, practice: result.practice });
-  }
-
   async function toggleMode(reasonId: string, mode: VisitMode) {
     if (!catalog) return;
     const reason = catalog.reasons.find((item) => item.id === reasonId);
@@ -306,14 +294,7 @@ export function WeekBoard() {
 
       <div className="rounded-3xl bg-card p-5 ring-1 ring-border">
         <h2 className="text-xl">How openings are cut</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Patients can book every {catalog.practice.slotMinutes} minutes inside a posted block, for the length of the visit type.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[10, 15, 20, 30].map((minutes) => (
-            <Button key={minutes} type="button" size="sm" variant={catalog.practice.slotMinutes === minutes ? "default" : "outline"} onClick={() => setSlot(minutes)}>
-              {minutes} min grid
-            </Button>
-          ))}
-        </div>
+        <p className="mt-1 text-sm text-muted-foreground">Patients book one visit: a 30-minute Comprehensive Eye Exam. Openings start every 30 minutes inside a posted block.</p>
         <div className="mt-4 space-y-2">
           {catalog.reasons.map((reason) => (
             <div key={reason.id} className="flex flex-wrap items-center gap-2 text-sm">

@@ -8,7 +8,7 @@ Appointments still live in Tebra. The widget calls the Tebra SOAP API to read wh
 
 1. Someone posts a block on the week board: clinician, place (or video), date, start, and end. A block is that calendar day. It does not roll into next week.
 2. MedSlot asks Tebra for appointments in that range (`GetAppointments`) and treats anything that is not cancelled or a no-show as busy. A clinician booked at one place is busy everywhere at that time.
-3. Openings are cut from the posted block using the visit length (`GetAppointmentReasons`) and the practice’s grid (10, 15, 20, or 30 minutes). A visit cannot cross from one place into another.
+3. The only visit is a 30-minute Comprehensive Eye Exam. Openings are cut every 30 minutes inside the posted block. A visit cannot cross from one place into another. In a live Tebra account the reason name has to include “Comprehensive” and “Eye” so MedSlot can use that reason id.
 4. Booking calls `CreateAppointment` with `AppointmentStatus` Tentative and `WasCreatedOnline` set. The time is held until the practice confirms it in Tebra. New patients are found with `GetPatients` or added with `CreatePatient`. Moves use `UpdateAppointment` and keep the status Tebra already has. Cancels use `UpdateAppointmentStatus`.
 
 If the next week has no posts, patients see a closed week. There is no fallback to a weekly template.

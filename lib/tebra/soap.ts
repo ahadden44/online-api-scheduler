@@ -247,17 +247,12 @@ export async function getReasons(config: TebraConfig, practiceId: string): Promi
   return asArray((result.AppointmentReasons as SoapBag | undefined)?.AppointmentReasonData as SoapBag | SoapBag[])
     .map((reason) => {
       const name = text(reason.Name);
-      const video = /video|tele|virtual/i.test(name);
-      const duration = Number(text(reason.DefaultDurationMinutes)) || 30;
-      const modes: VisitReason["modes"] = video ? ["Telehealth"] : ["InOffice", "Telehealth"];
       return {
         id: text(reason.AppointmentReasonId),
         name,
-        durationMinutes: duration,
-        modes,
-        description: video
-          ? "Offered when video hours are posted for that week."
-          : "Booked only inside hours posted for a specific place that week.",
+        durationMinutes: Number(text(reason.DefaultDurationMinutes)) || 30,
+        modes: ["InOffice"] as VisitReason["modes"],
+        description: "A 30-minute exam at the office where that clinician is posted that day.",
       };
     })
     .filter((reason) => reason.id && reason.name);

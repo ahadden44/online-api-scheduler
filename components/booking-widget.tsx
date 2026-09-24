@@ -338,7 +338,7 @@ export function BookingWidget() {
                     Back
                   </Button>
                   <Button type="submit" size="lg" disabled={submitting}>
-                    {submitting ? "Booking…" : "Book this time"}
+                    {submitting ? "Requesting…" : "Request this time"}
                   </Button>
                 </div>
                 {catalog.mode === "preview" ? (
@@ -346,7 +346,7 @@ export function BookingWidget() {
                     Preview only writes to this demo. Try an existing chart with Elena Vasquez, born 1988-04-12.
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">This creates the appointment in Tebra.</p>
+                  <p className="text-xs text-muted-foreground">This holds the time in Tebra as tentative until the practice confirms it.</p>
                 )}
               </form>
             ) : null}
@@ -613,14 +613,14 @@ function WhenStep(props: {
 function Done({ visit, timezone, onAgain }: { visit: BookedVisit; timezone: string; onAgain: () => void }) {
   return (
     <div className="px-5 py-8 md:px-8">
-      <p className="text-xs tracking-[0.16em] text-primary uppercase">You’re on the books</p>
+      <p className="text-xs tracking-[0.16em] text-primary uppercase">Request received</p>
       <h2 className="mt-2 text-3xl">{visit.reasonName}</h2>
       <p className="mt-2 text-lg">{formatInstant(visit.start, timezone)}</p>
       <p className="mt-1 text-muted-foreground">
         {visit.providerName} · {visit.locationName}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{visit.address}</p>
-      <p className="mt-4 text-sm">Confirmation {visit.id}</p>
+      <p className="mt-4 text-sm">The visit is tentative until the practice confirms it. Reference {visit.id}</p>
       {visit.practicePhone ? <p className="text-sm text-muted-foreground">Questions: {visit.practicePhone}</p> : null}
       <Button type="button" className="mt-6" variant="outline" onClick={onAgain}>
         Book another visit

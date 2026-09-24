@@ -399,7 +399,7 @@ export async function createAppointment(
     tag("AppointmentMode", input.mode),
     tag("AppointmentName", input.name),
     tag("AppointmentReasonId", input.reasonId),
-    tag("AppointmentStatus", "Scheduled"),
+    tag("AppointmentStatus", "Tentative"),
     tag("AppointmentType", "P"),
     tag("EndTime", input.end.toISOString()),
     tag("IsRecurring", false),
@@ -431,6 +431,7 @@ export async function updateAppointment(
     mode: "InOffice" | "Telehealth";
     name: string;
     notes: string;
+    status: string;
   },
 ): Promise<void> {
   const appointment = [
@@ -438,7 +439,7 @@ export async function updateAppointment(
     tag("AppointmentMode", input.mode),
     tag("AppointmentName", input.name),
     tag("AppointmentReasonId", input.reasonId),
-    tag("AppointmentStatus", "Scheduled"),
+    tag("AppointmentStatus", input.status || "Tentative"),
     tag("EndTime", input.end.toISOString()),
     tag("Notes", input.notes),
     tag("PatientId", input.patientId),

@@ -118,6 +118,7 @@ test("cancelled visits do not hold the time", () => {
   assert.ok(slots.some((slot) => slot.startMinutes === 9 * 60));
   assert.equal(isBlockingStatus("No-show"), false);
   assert.equal(isBlockingStatus("Rescheduled"), true);
+  assert.equal(isBlockingStatus("Tentative"), true);
 });
 
 test("touching blocks at the same place merge, and a different place does not", () => {

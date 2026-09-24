@@ -9,7 +9,7 @@ Appointments still live in Tebra. The widget calls the Tebra SOAP API to read wh
 1. Someone posts a block on the week board: clinician, place (or video), date, start, and end. A block is that calendar day. It does not roll into next week.
 2. MedSlot asks Tebra for appointments in that range (`GetAppointments`) and treats anything that is not cancelled or a no-show as busy. A clinician booked at one place is busy everywhere at that time.
 3. Openings are cut from the posted block using the visit length (`GetAppointmentReasons`) and the practice’s grid (10, 15, 20, or 30 minutes). A visit cannot cross from one place into another.
-4. Booking calls `CreateAppointment` with `WasCreatedOnline` set. New patients are found with `GetPatients` or added with `CreatePatient`. Moves use `UpdateAppointment`. Cancels use `UpdateAppointmentStatus`.
+4. Booking calls `CreateAppointment` with `AppointmentStatus` Tentative and `WasCreatedOnline` set. The time is held until the practice confirms it in Tebra. New patients are found with `GetPatients` or added with `CreatePatient`. Moves use `UpdateAppointment` and keep the status Tebra already has. Cancels use `UpdateAppointmentStatus`.
 
 If the next week has no posts, patients see a closed week. There is no fallback to a weekly template.
 
@@ -37,6 +37,31 @@ PRACTICE_TIMEZONE=America/New_York
 The endpoint is `https://webservice.kareo.com/services/soap/2.1/KareoServices.svc`. Passwords are XML-escaped. Credentials stay on the server.
 
 After connecting, sample preview hours are hidden. Post the real week on the board against the clinicians and service locations returned by `GetProviders` and `GetServiceLocations`. “Copy previous week” is explicit — nothing is copied unless you ask.
+
+## Try the calls without the app
+
+`scripts/tebra` is PowerShell for the same SOAP calls. It reads `.env.local` from the repo root, or the `TEBRA_*` environment variables if those are already set. The password is not printed. Appointment output includes patient names, so keep that window to yourself.
+
+From the repo root:
+
+```
+pwsh ./scripts/tebra/Test-TebraReads.ps1
+pwsh ./scripts/tebra/Find-TebraPatient.ps1 -FirstName Elena -LastName Vasquez -DateOfBirth 1988-04-12
+```
+
+`Test-TebraReads.ps1` calls `GetPractices`, `GetProviders`, `GetServiceLocations`, `GetAppointmentReasons`, and `GetAppointments` for the next seven days. Nothing is written.
+
+To hold one time as tentative, copy the ids from that read, then:
+
+```
+pwsh ./scripts/tebra/New-TebraTentativeAppointment.ps1 -Create -PatientId 1 -ProviderId 2 -ServiceLocationId 3 -ReasonId 4 -Start 2026-09-30T14:00:00Z -End 2026-09-30T14:20:00Z
+```
+
+`-Create` is required. Cancel that test the same way the app does:
+
+```
+pwsh ./scripts/tebra/Set-TebraAppointmentStatus.ps1 -AppointmentId 99 -Status Cancelled
+```
 
 ## Run
 

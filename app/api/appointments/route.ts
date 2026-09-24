@@ -14,6 +14,13 @@ export async function POST(request: Request) {
       mode?: VisitMode;
       reasonId?: string;
       notes?: string;
+      insurance?: {
+        plan?: string;
+        groupId?: string;
+        memberId?: string;
+        primaryHolder?: string;
+        primaryHolderDob?: string;
+      };
       patient?: {
         firstName?: string;
         lastName?: string;
@@ -30,6 +37,7 @@ export async function POST(request: Request) {
       mode: body.mode === "Telehealth" ? "Telehealth" : "InOffice",
       reasonId: body.reasonId ?? "",
       notes: body.notes,
+      insurance: body.insurance ?? {},
       patient: {
         firstName: body.patient?.firstName ?? "",
         lastName: body.patient?.lastName ?? "",

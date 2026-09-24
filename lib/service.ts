@@ -16,6 +16,7 @@ import {
   type TebraAppointment,
   type TebraConfig,
 } from "@/lib/tebra/soap";
+import { insuranceNote, readInsurance, type InsuranceInput } from "@/lib/insurance";
 import { addDays, compareDates, dateKeyInZone, isDateKey, mondayOnOrBefore, zonedDateTimeToUtc } from "@/lib/time";
 import type {
   BusyInterval,
@@ -526,9 +527,16 @@ export async function bookVisit(input: {
   mode: VisitMode;
   reasonId: string;
   notes?: string;
+  insurance: InsuranceInput;
   patient: Identity;
 }): Promise<BookedVisit> {
   if (!input.start || Number.isNaN(Date.parse(input.start))) throw new ScheduleError("Choose a time.");
+  let insurance;
+  try {
+    insurance = readInsurance(input.insurance);
+  } catch (error) {
+    throw new ScheduleError((error as Error).message);
+  }
   const working = await loadWorking();
   const { slot, reason } = await requireOpenSlot(working, {
     ...input,
@@ -540,7 +548,7 @@ export async function bookVisit(input: {
       ? slot.locationId
       : process.env.TEBRA_DEFAULT_SERVICE_LOCATION_ID || working.locations[0]?.id || null;
   if (!serviceLocationId) throw new ScheduleError("Add a Tebra service location before booking video visits.");
-  const notes = [input.notes?.trim(), "Requested from the MedSlot widget. Held as tentative until the practice confirms it."].filter(Boolean).join(" ");
+  const notes = [insuranceNote(insurance), input.notes?.trim(), "Requested from the MedSlot widget. Held as tentative until the practice confirms it."].filter(Boolean).join(" ");
   const name = `${reason.name} — ${patient.name}`;
   let id = `apt-${crypto.randomUUID()}`;
   if (working.config) {

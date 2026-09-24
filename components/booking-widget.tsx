@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addDays, dateKeyInZone, formatInstant, formatLongDate, formatMinutes, formatMonthDay, mondayOnOrBefore, weekdayName } from "@/lib/time";
+import { CASH_PLAN, INSURANCE_PLANS, readInsurance } from "@/lib/insurance";
 import type { BookedVisit } from "@/lib/service";
 import type { Catalog, OpenSlot, ScheduleBlock, VisitReason } from "@/lib/types";
 
@@ -24,8 +25,27 @@ type PatientForm = {
   phone: string;
   email: string;
   notes: string;
+  insurance: string;
+  groupId: string;
+  memberId: string;
+  primaryHolder: string;
+  primaryHolderDob: string;
   patientId?: string;
 };
+
+const emptyForm = (): PatientForm => ({
+  firstName: "",
+  lastName: "",
+  dob: "",
+  phone: "",
+  email: "",
+  notes: "",
+  insurance: "",
+  groupId: "",
+  memberId: "",
+  primaryHolder: "",
+  primaryHolderDob: "",
+});
 
 type ApiError = Error & { matches?: { id: string; label: string }[] | null };
 
@@ -45,6 +65,12 @@ function placeMatches(slot: OpenSlot, place: Place | null): boolean {
   return slot.mode === "InOffice" && slot.locationId === place.id;
 }
 
+function blockMatches(block: ScheduleBlock, place: Place | null): boolean {
+  if (!place || place.kind === "any") return true;
+  if (place.kind === "video") return block.mode === "Telehealth";
+  return block.mode === "InOffice" && block.locationId === place.id;
+}
+
 export function BookingWidget() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -58,7 +84,7 @@ export function BookingWidget() {
   const [weekIndex, setWeekIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<OpenSlot | null>(null);
-  const [form, setForm] = useState<PatientForm>({ firstName: "", lastName: "", dob: "", phone: "", email: "", notes: "" });
+  const [form, setForm] = useState<PatientForm>(emptyForm);
   const [matches, setMatches] = useState<{ id: string; label: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -142,6 +168,19 @@ export function BookingWidget() {
     setSubmitting(true);
     setFormError(null);
     try {
+      readInsurance({
+        plan: form.insurance,
+        groupId: form.groupId,
+        memberId: form.memberId,
+        primaryHolder: form.primaryHolder,
+        primaryHolderDob: form.primaryHolderDob,
+      });
+    } catch (error) {
+      setFormError((error as Error).message);
+      setSubmitting(false);
+      return;
+    }
+    try {
       const result = await readJson<{ visit: BookedVisit }>(
         await fetch("/api/appointments", {
           method: "POST",
@@ -153,7 +192,21 @@ export function BookingWidget() {
             mode: selectedSlot.mode,
             reasonId: reason.id,
             notes: form.notes,
-            patient: form,
+            insurance: {
+              plan: form.insurance,
+              groupId: form.groupId,
+              memberId: form.memberId,
+              primaryHolder: form.primaryHolder,
+              primaryHolderDob: form.primaryHolderDob,
+            },
+            patient: {
+              firstName: form.firstName,
+              lastName: form.lastName,
+              dob: form.dob,
+              phone: form.phone,
+              email: form.email,
+              patientId: form.patientId,
+            },
           }),
         }),
       );
@@ -196,7 +249,7 @@ export function BookingWidget() {
             setStep("visit");
             setVisit(null);
             setSelectedSlot(null);
-            setForm({ firstName: "", lastName: "", dob: "", phone: "", email: "", notes: "" });
+            setForm(emptyForm());
           }}
         />
       ) : (
@@ -248,8 +301,6 @@ export function BookingWidget() {
               <PlaceStep
                 catalog={catalog}
                 reason={reason}
-                blocks={activeBlocks.filter((block) => block.date >= thisMonday && block.date <= addDays(thisMonday, 6))}
-                loading={loadingTimes}
                 error={scheduleError}
                 onBack={catalog.reasons.length === 1 ? null : () => setStep("visit")}
                 onChoose={choosePlace}
@@ -259,7 +310,7 @@ export function BookingWidget() {
             {shownStep === "when" && reason && place ? (
               <WhenStep
                 catalog={catalog}
-                blocks={activeBlocks}
+                blocks={activeBlocks.filter((block) => blockMatches(block, place))}
                 slots={activeSlots}
                 weekDates={weekDates}
                 weekIndex={weekIndex}
@@ -301,6 +352,42 @@ export function BookingWidget() {
                   <div className="sm:col-span-2">
                     <Field label="Email" type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
                   </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="insurance">Type of insurance</Label>
+                    <select
+                      id="insurance"
+                      required
+                      value={form.insurance}
+                      onChange={(event) => setForm({ ...form, insurance: event.target.value })}
+                      className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      <option value="">Choose a plan</option>
+                      {INSURANCE_PLANS.map((plan) => (
+                        <option key={plan} value={plan}>
+                          {plan}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {form.insurance && form.insurance !== CASH_PLAN ? (
+                    <>
+                      <Field label="Group ID" value={form.groupId} onChange={(groupId) => setForm({ ...form, groupId })} />
+                      <Field label="Member ID" value={form.memberId} onChange={(memberId) => setForm({ ...form, memberId })} />
+                      <Field
+                        label="Primary Holder (leave blank if self)"
+                        value={form.primaryHolder}
+                        onChange={(primaryHolder) => setForm({ ...form, primaryHolder })}
+                        required={false}
+                      />
+                      <Field
+                        label="Primary Holder DOB (leave blank if self)"
+                        type="date"
+                        value={form.primaryHolderDob}
+                        onChange={(primaryHolderDob) => setForm({ ...form, primaryHolderDob })}
+                        required={false}
+                      />
+                    </>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Note for the practice</Label>
@@ -383,12 +470,24 @@ function Panel({ note, children }: { note: string; children: string }) {
   );
 }
 
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+}) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} className="h-10" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={type !== "email"} />
+      <Input id={id} className="h-10" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required ?? type !== "email"} />
     </div>
   );
 }
@@ -396,38 +495,28 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
 function PlaceStep({
   catalog,
   reason,
-  blocks,
-  loading,
   error,
   onBack,
   onChoose,
 }: {
   catalog: Catalog;
   reason: VisitReason;
-  blocks: ScheduleBlock[];
-  loading: boolean;
   error: string | null;
   onBack: (() => void) | null;
   onChoose: (place: Place) => void;
 }) {
-  const locations = catalog.locations.filter(
-    (location) => reason.modes.includes("InOffice") && blocks.some((block) => block.mode === "InOffice" && block.locationId === location.id),
-  );
-  const video = reason.modes.includes("Telehealth") && blocks.some((block) => block.mode === "Telehealth");
-  const empty = !loading && locations.length === 0 && !video;
+  const locations = catalog.locations;
+  const video = reason.modes.includes("Telehealth");
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl">Where should this visit happen?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Places appear only if someone is posted there this week. Empty days stay empty.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Choose an office. Open times for that office are on the next step.</p>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {loading ? <p className="text-sm text-muted-foreground">Reading this week’s posted hours…</p> : null}
-      {empty ? (
-        <p className="rounded-2xl bg-secondary p-4 text-sm">
-          Nothing is posted for {reason.name} this week. The practice does not fill the gap with repeating office hours.
-        </p>
+      {locations.length === 0 && !video ? (
+        <p className="rounded-2xl bg-secondary p-4 text-sm">This practice has no offices on file yet.</p>
       ) : null}
       <div className="grid gap-3">
         {locations.map((location) => (
@@ -436,7 +525,6 @@ function PlaceStep({
             color={location.color}
             title={location.name}
             detail={location.address}
-            summary={summarize(blocks.filter((block) => block.locationId === location.id))}
             onClick={() => onChoose({ kind: "location", id: location.id })}
           />
         ))}
@@ -444,15 +532,9 @@ function PlaceStep({
           <PlaceCard
             color={VIDEO}
             title="Video visit"
-            detail="From wherever that clinician’s video hours are posted"
-            summary={summarize(blocks.filter((block) => block.mode === "Telehealth"))}
+            detail="A video visit with the clinician"
             onClick={() => onChoose({ kind: "video" })}
           />
-        ) : null}
-        {!empty && !loading ? (
-          <button type="button" className="text-left text-sm text-primary underline-offset-4 hover:underline" onClick={() => onChoose({ kind: "any" })}>
-            Show every posted opening
-          </button>
         ) : null}
       </div>
       {onBack ? (
@@ -464,7 +546,7 @@ function PlaceStep({
   );
 }
 
-function PlaceCard({ color, title, detail, summary, onClick }: { color: string; title: string; detail: string; summary: string; onClick: () => void }) {
+function PlaceCard({ color, title, detail, onClick }: { color: string; title: string; detail: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="rounded-2xl bg-background p-4 text-left ring-1 ring-border transition hover:ring-primary">
       <div className="flex items-start gap-3">
@@ -472,20 +554,10 @@ function PlaceCard({ color, title, detail, summary, onClick }: { color: string; 
         <span>
           <span className="block font-medium">{title}</span>
           <span className="mt-1 block text-sm text-muted-foreground">{detail}</span>
-          <span className="mt-2 block text-sm">{summary}</span>
         </span>
       </div>
     </button>
   );
-}
-
-function summarize(blocks: ScheduleBlock[]): string {
-  if (!blocks.length) return "No hours this week";
-  return blocks
-    .slice()
-    .sort((a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes)
-    .map((block) => `${weekdayName(block.date).slice(0, 3)} ${formatMinutes(block.startMinutes)}–${formatMinutes(block.endMinutes)}`)
-    .join(" · ");
 }
 
 function WhenStep(props: {

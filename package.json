@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-43123}",
     "lint": "eslint",
-    "test": "tsx --test lib/availability.test.ts lib/tebra/soap.test.ts lib/seed.test.ts lib/staff-auth.test.ts"
+    "test": "tsx --test lib/availability.test.ts lib/tebra/soap.test.ts lib/seed.test.ts lib/staff-auth.test.ts lib/insurance.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
